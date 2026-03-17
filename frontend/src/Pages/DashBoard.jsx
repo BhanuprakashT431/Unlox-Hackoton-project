@@ -1,23 +1,8 @@
 import { useEffect, useState } from "react";
 import Chart from "chart.js/auto";
-import { motion } from "framer-motion";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import "./dashboard.css";
+import "./Dashboard.css";
 
 const API = "http://127.0.0.1:5000";
-
-/* ===== STAT CARD ===== */
-function StatCard({ title, value, color, icon }) {
-  return (
-    <motion.div className="stat-card" whileHover={{ scale: 1.05 }}>
-      <div className="stat-top">
-        <span>{icon}</span>
-        <p>{title}</p>
-      </div>
-      <h2 style={{ color }}>{value}</h2>
-    </motion.div>
-  );
-}
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
@@ -27,57 +12,43 @@ export default function Dashboard() {
     pending: 0,
   });
 
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    due_date: "",
+    priority: "medium",
+  });
+
   useEffect(() => {
     loadAll();
-    const interval = setInterval(loadAll, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   async function loadAll() {
     try {
-      // GET TASKS
-      const res1 = await fetch(`${API}/tasks`);
-      const data1 = await res1.json();
-      setTasks(data1);
-      drawChart(data1);
+      const res = await fetch(`${API}/tasks`);
+      const data = await res.json();
 
-      // GET STATS
-      const res2 = await fetch(`${API}/stats`);
-      const data2 = await res2.json();
-      setStats(data2);
-    } catch (err) {
-      console.error("LOAD ERROR:", err);
-    }
-  }
+      const safeTasks = Array.isArray(data) ? data : [];
+      setTasks(safeTasks);
 
-  /* 🔥 FIXED ADD TASK */
-  async function addTask() {
-    try {
-      const title = prompt("Enter Task Name:");
-      if (!title) return;
+      const completed = safeTasks.filter(t => t.status === "completed").length;
+      const pending = safeTasks.length - completed;
 
-      const res = await fetch(`${API}/add`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: title,
-          due_date: new Date().toISOString(), // ✅ REQUIRED
-          priority: "medium",
-        }),
+      setStats({
+        total: safeTasks.length,
+        completed,
+        pending,
       });
 
-      const data = await res.json();
-      console.log("ADD RESPONSE:", data);
-
-      loadAll(); // refresh UI
+      drawChart(completed, pending);
     } catch (err) {
-      console.error("ADD ERROR:", err);
+      console.error(err);
+      setTasks([]);
     }
   }
 
-  function drawChart(data) {
+  function drawChart(completed, pending) {
     const ctx = document.getElementById("chart");
     if (!ctx) return;
 
@@ -86,18 +57,41 @@ export default function Dashboard() {
     window.myChart = new Chart(ctx, {
       type: "doughnut",
       data: {
-        labels: ["Tasks"],
+        labels: ["Completed", "Pending"],
         datasets: [
           {
-            data: [data.length],
-            backgroundColor: ["#6366f1"],
+            data: [completed, pending],
+            backgroundColor: ["#22c55e", "#f59e0b"],
           },
         ],
       },
-      options: {
-        plugins: { legend: { display: false } },
-      },
     });
+  }
+
+  async function submitTask() {
+    await fetch(`${API}/add`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...form,
+        due_date: new Date(form.due_date).toISOString(),
+      }),
+    });
+
+    setShowModal(false);
+    loadAll();
+  }
+
+  async function markComplete(id) {
+    await fetch(`${API}/complete/${id}`, { method: "PUT" });
+    loadAll();
+  }
+
+  async function deleteTask(id) {
+    await fetch(`${API}/delete/${id}`, { method: "DELETE" });
+    loadAll();
   }
 
   return (
@@ -106,29 +100,33 @@ export default function Dashboard() {
       {/* SIDEBAR */}
       <div className="sidebar">
         <h2>🚀 CampusFlow</h2>
-        <nav>
-          <p className="active">Dashboard</p>
-          <p>Tasks</p>
-          <p>Analytics</p>
-        </nav>
+        <p className="active">Dashboard</p>
+        <p>Tasks</p>
+        <p>Analytics</p>
       </div>
 
       {/* MAIN */}
       <div className="main">
 
-        {/* TOPBAR */}
         <div className="topbar">
           <h1>Welcome Back 👋</h1>
-          <button className="primary" onClick={addTask}>
-            + Add Task
-          </button>
+          <button onClick={() => setShowModal(true)}>+ Add Task</button>
         </div>
 
         {/* STATS */}
         <div className="stats">
-          <StatCard title="Total Tasks" value={stats.total} color="#6366f1" icon="📊" />
-          <StatCard title="Completed" value={stats.completed} color="#22c55e" icon="✅" />
-          <StatCard title="Pending" value={stats.pending} color="#f59e0b" icon="⏳" />
+          <div className="stat-card">
+            <p>Total</p>
+            <h2>{stats.total}</h2>
+          </div>
+          <div className="stat-card">
+            <p>Completed</p>
+            <h2 style={{ color: "#22c55e" }}>{stats.completed}</h2>
+          </div>
+          <div className="stat-card">
+            <p>Pending</p>
+            <h2 style={{ color: "#f59e0b" }}>{stats.pending}</h2>
+          </div>
         </div>
 
         {/* GRID */}
@@ -138,51 +136,43 @@ export default function Dashboard() {
           <div className="card">
             <h3>Your Tasks</h3>
 
-            <DragDropContext
-              onDragEnd={(result) => {
-                if (!result.destination) return;
-                const items = Array.from(tasks);
-                const [reordered] = items.splice(result.source.index, 1);
-                items.splice(result.destination.index, 0, reordered);
-                setTasks(items);
-              }}
-            >
-              <Droppable droppableId="tasks">
-                {(provided) => (
-                  <div ref={provided.innerRef} {...provided.droppableProps}>
+            {tasks.map((t) => (
+              <div key={t.id} className={`task ${t.status}`}>
 
-                    {tasks.map((t, index) => (
-                      <Draggable key={t.id} draggableId={t.id.toString()} index={index}>
-                        {(provided) => (
-                          <motion.div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className="task"
-                            whileHover={{ scale: 1.03 }}
-                          >
-                            <div className="task-top">
-                              <h4>{t.title}</h4>
-                              <span className={`badge ${t.priority || "medium"}`}>
-                                {t.priority || "medium"}
-                              </span>
-                            </div>
+                <div className="task-header">
+                  <h4>{t.title}</h4>
+                  <span className={`badge ${t.priority}`}>
+                    {t.priority}
+                  </span>
+                </div>
 
-                            <p className="date">
-                              {t.due_date
-                                ? new Date(t.due_date).toLocaleDateString()
-                                : "No date"}
-                            </p>
-                          </motion.div>
-                        )}
-                      </Draggable>
-                    ))}
+                <p className="date">
+                  {t.due_date
+                    ? new Date(t.due_date).toDateString()
+                    : "No Date"}
+                </p>
 
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+                <div className="task-actions">
+
+                  {t.status !== "completed" ? (
+                    <button onClick={() => markComplete(t.id)}>
+                      ✅ Complete
+                    </button>
+                  ) : (
+                    <span className="done">✔ Completed</span>
+                  )}
+
+                  <button
+                    className="delete-btn"
+                    onClick={() => deleteTask(t.id)}
+                  >
+                    🗑 Delete
+                  </button>
+
+                </div>
+
+              </div>
+            ))}
           </div>
 
           {/* ANALYTICS */}
@@ -193,13 +183,56 @@ export default function Dashboard() {
 
         </div>
 
-        {/* CALENDAR */}
-        <div className="calendar-card">
-          <h3>📅 Calendar</h3>
-          <input type="date" className="date-input" />
-        </div>
-
       </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+
+            <h2>Add Task</h2>
+
+            <input
+              placeholder="Title"
+              onChange={(e) =>
+                setForm({ ...form, title: e.target.value })
+              }
+            />
+
+            <textarea
+              placeholder="Description"
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+            />
+
+            <input
+              type="date"
+              onChange={(e) =>
+                setForm({ ...form, due_date: e.target.value })
+              }
+            />
+
+            <select
+              onChange={(e) =>
+                setForm({ ...form, priority: e.target.value })
+              }
+            >
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+
+            <div className="modal-buttons">
+              <button onClick={submitTask}>Add</button>
+              <button onClick={() => setShowModal(false)}>
+                Cancel
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
