@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
 import Chart from "chart.js/auto";
+import { motion } from "framer-motion";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import "./dashboard.css";
 
 export default function Dashboard() {
 
   const [tasks, setTasks] = useState([]);
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
     loadTasks();
+
+    const interval = setInterval(loadTasks, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   async function loadTasks() {
@@ -19,56 +26,146 @@ export default function Dashboard() {
   async function addTask() {
     await fetch("http://127.0.0.1:5000/add", {
       method: "POST",
-      headers: {"Content-Type":"application/json"},
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title:"New Task",
-        due_date:"2026",
-        description:"",
-        priority:"medium"
+        title: "New Task",
+        due_date: new Date().toISOString(),
+        description: "",
+        priority: "medium"
       })
     });
 
+    showToast("Task Added 🚀");
     loadTasks();
   }
 
-  function drawChart(data){
-    new Chart(document.getElementById("chart"), {
+  function drawChart(data) {
+    const ctx = document.getElementById("chart");
+    if (!ctx) return;
+
+    new Chart(ctx, {
       type: "doughnut",
       data: {
         labels: ["Tasks"],
         datasets: [{
           data: [data.length],
-          backgroundColor: ["#4CAF50"]
+          backgroundColor: ["#6366f1"]
         }]
       }
     });
   }
 
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.innerText = msg;
+    t.style.opacity = 1;
+    setTimeout(() => t.style.opacity = 0, 2000);
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle("dark");
+    setDark(!dark);
+  }
+
   return (
-    <div style={{ display: "flex" }}>
+    <motion.div
+      className="layout"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
 
-      {/* Sidebar */}
-      <div style={{ width: 220, background: "#111", color: "white", padding: 20 }}>
+      {/* SIDEBAR */}
+      <div className="sidebar">
         <h2>CampusFlow</h2>
+        <p>Dashboard</p>
+        <p>Tasks</p>
+        <p>Analytics</p>
       </div>
 
-      {/* Main */}
-      <div style={{ flex: 1, padding: 20 }}>
+      {/* MAIN */}
+      <div className="main">
 
-        <h1>Dashboard</h1>
-
-        <button onClick={addTask}>Add Task</button>
-
-        <canvas id="chart" style={{ maxWidth: 300 }}></canvas>
-
-        {tasks.map(task => (
-          <div key={task.id} style={{ margin: 10, padding: 10, border: "1px solid #ccc" }}>
-            {task.title}
+        {/* TOPBAR */}
+        <div className="topbar">
+          <h1>Dashboard</h1>
+          <div>
+            <button onClick={addTask}>+ Add</button>
+            <button onClick={toggleTheme}>🌙</button>
           </div>
-        ))}
+        </div>
 
+        {/* GRID */}
+        <div className="grid">
+
+          {/* TASKS */}
+          <div className="card">
+            <h3>Your Tasks</h3>
+
+            <DragDropContext onDragEnd={(result) => {
+              if (!result.destination) return;
+
+              const items = Array.from(tasks);
+              const [reordered] = items.splice(result.source.index, 1);
+              items.splice(result.destination.index, 0, reordered);
+
+              setTasks(items);
+              showToast("Reordered 🔄");
+            }}>
+
+              <Droppable droppableId="tasks">
+                {(provided) => (
+                  <div ref={provided.innerRef} {...provided.droppableProps}>
+
+                    {tasks.map((t, index) => (
+                      <Draggable key={t.id} draggableId={t.id.toString()} index={index}>
+                        {(provided) => (
+                          <motion.div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="task"
+                            whileHover={{ scale: 1.03 }}
+                          >
+                            <h4>{t.title}</h4>
+                            <p>{t.due_date}</p>
+                            <span className={`badge ${t.priority}`}>
+                              {t.priority}
+                            </span>
+                          </motion.div>
+                        )}
+                      </Draggable>
+                    ))}
+
+                    {provided.placeholder}
+
+                  </div>
+                )}
+              </Droppable>
+
+            </DragDropContext>
+
+          </div>
+
+          {/* ANALYTICS */}
+          <div className="card">
+            <h3>Analytics</h3>
+            <canvas id="chart"></canvas>
+          </div>
+
+          {/* CALENDAR */}
+          <div className="card">
+            <h3>📅 Calendar</h3>
+            <input type="date" />
+          </div>
+
+        </div>
+
+      
       </div>
 
-    </div>
+      {/* TOAST */}
+      <div id="toast"></div>
+
+    </motion.div>
   );
 }

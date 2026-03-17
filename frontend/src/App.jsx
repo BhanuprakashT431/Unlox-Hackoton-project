@@ -1,18 +1,41 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Intro from "./pages/Intro";
-import Dashboard from "./pages/Dashboard";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 
-function App() {
+import Intro from "./Pages/Intro";
+import DashBoard from "./Pages/DashBoard";
+import Login from "./Pages/Login";
+
+function PageWrapper({ children }) {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/intro" element={<Intro />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
-    </BrowserRouter>
+    <motion.div
+      initial={{ x: "100%", opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: "-100%", opacity: 0 }}
+      transition={{ duration: 0.6 }}
+    >
+      {children}
+    </motion.div>
   );
 }
 
-export default App;
+function AnimatedRoutes() {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageWrapper><Intro /></PageWrapper>} />
+        <Route path="/dashboard" element={<PageWrapper><DashBoard /></PageWrapper>} />
+        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AnimatedRoutes />
+    </BrowserRouter>
+  );
+}

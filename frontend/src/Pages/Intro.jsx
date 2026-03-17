@@ -1,35 +1,50 @@
+import React from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import "./Intro.css"; 
 
 export default function Intro() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
   return (
-    <div style={{ padding: 40 }}>
+    <div className="intro-container">
 
-      <section>
-        <h1>🚀 CampusFlow</h1>
-        <p>Manage your academic life effortlessly</p>
-      </section>
+      {/* Glow Background */}
+      <div className="glow"></div>
 
-      <section>
-        <h2>📅 Track Deadlines</h2>
-        <p>Never miss assignments again</p>
-      </section>
+      <motion.div
+        className="intro-content"
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1 }}
+      >
+        <motion.h1
+          className="intro-title"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          CampusFlow
+        </motion.h1>
 
-      <section>
-        <h2>📊 Analytics</h2>
-        <p>Visual insights for productivity</p>
-      </section>
+        <motion.p
+          className="intro-subtitle"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+        >
+          Organize. Track. Achieve. 🚀
+        </motion.p>
 
-      <section>
-        <h2>🤖 Smart AI</h2>
-        <p>Get intelligent suggestions</p>
-      </section>
-
-      <button onClick={() => nav("/dashboard")}>
-        Enter Dashboard →
-      </button>
-
+        <motion.button
+          className="intro-btn"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => navigate("/dashboard")}
+        >
+          Get Started →
+        </motion.button>
+      </motion.div>
     </div>
   );
 }
