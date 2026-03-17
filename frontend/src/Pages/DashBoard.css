@@ -1,65 +1,97 @@
-/* LAYOUT */
-.layout {
-  display: flex;
-  width: 100vw;
-  height: 100vh;
-}
-
-/* SIDEBAR */
-.sidebar {
-  width: 220px;
-  height: calc(100vh - 40px);
-  margin: 20px;
-  padding: 20px;
-  border-radius: 20px;
-
-  backdrop-filter: blur(20px);
-  background: rgba(15, 23, 42, 0.7);
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
   color: white;
-
-  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  background: linear-gradient(135deg, #0f0f1a, #1e1b4b);
 }
 
-/* MAIN */
-.main {
-  flex: 1;
-  padding: 30px;
-  overflow-y: auto;
-  position: relative;
-}
-
-/* GLOW EFFECT */
-.main::before {
+/* Glow */
+body::before {
   content: "";
-  position: absolute;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(99,102,241,0.4), transparent);
-  top: -120px;
-  right: -120px;
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #6366f1, transparent);
   filter: blur(120px);
+  top: -100px;
+  left: -100px;
   z-index: -1;
 }
 
-/* TOPBAR */
+/* Layout */
+.layout {
+  display: flex;
+  height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  padding: 30px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 0 20px 20px 0;
+}
+
+.sidebar nav {
+  margin-top: 20px;
+}
+
+.sidebar p {
+  padding: 10px;
+  opacity: 0.6;
+  border-radius: 10px;
+}
+
+.sidebar .active,
+.sidebar p:hover {
+  background: rgba(255,255,255,0.1);
+  opacity: 1;
+}
+
+/* Main */
+.main {
+  flex: 1;
+  padding: 40px;
+}
+
+/* Top */
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-/* BUTTON */
-button {
-  margin-left: 10px;
+/* Button */
+.primary {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border: none;
-  padding: 10px 14px;
+  padding: 10px 20px;
   border-radius: 10px;
+  border: none;
   color: white;
-  cursor: pointer;
 }
 
-/* GRID */
+/* Stats */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  padding: 20px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+}
+
+.stat-top {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Grid */
 .grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -67,43 +99,33 @@ button {
   margin-top: 20px;
 }
 
-/* CARD */
+/* Card */
 .card {
   padding: 20px;
-  border-radius: 20px;
-  backdrop-filter: blur(20px);
-  background: rgba(255,255,255,0.6);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
 }
 
-/* TASK */
+/* Task */
 .task {
-  padding: 15px;
   margin-top: 10px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.5);
-}
-
-/* BADGE */
-.badge {
-  padding: 5px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-}
-
-.high { background: rgba(255,0,0,0.2); color: red; }
-.medium { background: rgba(255,165,0,0.2); color: orange; }
-.low { background: rgba(0,255,0,0.2); color: green; }
-
-/* TOAST */
-#toast {
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
-  background: black;
-  color: white;
   padding: 12px;
   border-radius: 10px;
-  opacity: 0;
-  transition: 0.4s;
+  background: rgba(255,255,255,0.05);
+}
+
+/* Badge */
+.badge.low { background: #22c55e; padding: 3px 8px; border-radius: 6px; }
+.badge.medium { background: #f59e0b; padding: 3px 8px; border-radius: 6px; }
+.badge.high { background: #ef4444; padding: 3px 8px; border-radius: 6px; }
+
+/* Calendar */
+.calendar-card {
+  margin-top: 20px;
+}
+
+.date-input {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
 }

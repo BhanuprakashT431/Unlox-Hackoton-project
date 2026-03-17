@@ -1,40 +1,74 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import "./Intro.css"; 
+import "./Intro.css";
 
 export default function Intro() {
   const navigate = useNavigate();
 
+  const [text, setText] = useState("");
+  const fullText = "Smart Student Productivity Platform 🚀";
+  useEffect(() => {
+  const glow = document.querySelector(".cursor-glow");
+
+  const move = (e) => {
+    glow.style.left = e.clientX + "px";
+    glow.style.top = e.clientY + "px";
+  };
+
+  window.addEventListener("mousemove", move);
+
+  return () => window.removeEventListener("mousemove", move);
+}, []);
+
+  // Typewriter
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      setText(fullText.slice(0, i));
+      i++;
+      if (i > fullText.length) clearInterval(interval);
+    }, 40);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Voice Welcome
+  useEffect(() => {
+    const speak = () => {
+      const msg = new SpeechSynthesisUtterance(
+        "Welcome to Campus Flow"
+      );
+      msg.rate = 1;
+      window.speechSynthesis.speak(msg);
+    };
+    setTimeout(speak, 1500);
+  }, []);
+
   return (
     <div className="intro-container">
 
-      {/* Glow Background */}
-      <div className="glow"></div>
+      {/* Animated Background */}
+      <div className="animated-bg"></div>
 
+      {/* Mouse Glow */}
+      <div className="cursor-glow"></div>
+
+      {/* Content */}
       <motion.div
         className="intro-content"
-        initial={{ opacity: 0, y: 60 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1 }}
       >
         <motion.h1
           className="intro-title"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
         >
           CampusFlow
         </motion.h1>
 
-        <motion.p
-          className="intro-subtitle"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-        >
-          Organize. Track. Achieve. 🚀
-        </motion.p>
+        <p className="intro-subtitle">{text}</p>
 
         <motion.button
           className="intro-btn"
@@ -45,6 +79,11 @@ export default function Intro() {
           Get Started →
         </motion.button>
       </motion.div>
+
+      {/* AI Popup */}
+      <div className="ai-popup">
+        🤖 AI Ready to Assist You
+      </div>
     </div>
   );
 }

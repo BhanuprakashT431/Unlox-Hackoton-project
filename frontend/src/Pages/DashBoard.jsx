@@ -2,96 +2,112 @@ import { useEffect, useState } from "react";
 import Chart from "chart.js/auto";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import "./dashboard.css";
+import "./Dashboard.css";
+
+/* ===== STAT CARD ===== */
+function StatCard({ title, value, color, icon }) {
+  return (
+    <motion.div
+      className="stat-card"
+      whileHover={{ scale: 1.05 }}
+    >
+      <div className="stat-top">
+        <span>{icon}</span>
+        <p>{title}</p>
+      </div>
+      <h2 style={{ color }}>{value}</h2>
+    </motion.div>
+  );
+}
 
 export default function Dashboard() {
-
   const [tasks, setTasks] = useState([]);
-  const [dark, setDark] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    completed: 0,
+    pending: 0,
+  });
 
   useEffect(() => {
-    loadTasks();
-
-    const interval = setInterval(loadTasks, 5000);
+    loadAll();
+    const interval = setInterval(loadAll, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  async function loadTasks() {
-    const res = await fetch("http://127.0.0.1:5000/tasks");
-    const data = await res.json();
-    setTasks(data);
-    drawChart(data);
+  async function loadAll() {
+    const res1 = await fetch("http://127.0.0.1:5000/tasks");
+    const data1 = await res1.json();
+    setTasks(data1);
+    drawChart(data1);
+
+    const res2 = await fetch("http://127.0.0.1:5000/stats");
+    const data2 = await res2.json();
+    setStats(data2);
   }
 
   async function addTask() {
     await fetch("http://127.0.0.1:5000/add", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: "New Task",
-        due_date: new Date().toISOString(),
-        description: "",
-        priority: "medium"
-      })
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "New Task" }),
     });
-
-    showToast("Task Added 🚀");
-    loadTasks();
+    loadAll();
   }
 
   function drawChart(data) {
     const ctx = document.getElementById("chart");
     if (!ctx) return;
 
-    new Chart(ctx, {
+    if (window.myChart) window.myChart.destroy();
+
+    window.myChart = new Chart(ctx, {
       type: "doughnut",
       data: {
         labels: ["Tasks"],
-        datasets: [{
-          data: [data.length],
-          backgroundColor: ["#6366f1"]
-        }]
-      }
+        datasets: [
+          {
+            data: [data.length],
+            backgroundColor: ["#6366f1"],
+          },
+        ],
+      },
+      options: {
+        plugins: { legend: { display: false } },
+      },
     });
   }
 
-  function showToast(msg) {
-    const t = document.getElementById("toast");
-    t.innerText = msg;
-    t.style.opacity = 1;
-    setTimeout(() => t.style.opacity = 0, 2000);
-  }
-
-  function toggleTheme() {
-    document.body.classList.toggle("dark");
-    setDark(!dark);
-  }
-
   return (
-    <motion.div
-      className="layout"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
+    <div className="layout">
 
       {/* SIDEBAR */}
       <div className="sidebar">
-        <h2>CampusFlow</h2>
-        <p>Dashboard</p>
-        <p>Tasks</p>
-        <p>Analytics</p>
+        <h2>🚀 CampusFlow</h2>
+        <nav>
+          <p className="active">Dashboard</p>
+          <p>Tasks</p>
+          <p>Analytics</p>
+        </nav>
       </div>
 
       {/* MAIN */}
       <div className="main">
 
-        {/* TOPBAR */}
+        {/* TOP */}
         <div className="topbar">
-          <h1>Dashboard</h1>
-          <div>
-            <button onClick={addTask}>+ Add</button>
-            <button onClick={toggleTheme}>🌙</button>
-          </div>
+          <h1>Welcome Back 👋</h1>
+          <button className="primary" onClick={addTask}>
+            + Add Task
+          </button>
+        </div>
+
+        {/* STATS */}
+        <div className="stats">
+          <StatCard title="Total Tasks" value={stats.total} color="#6366f1" icon="📊" />
+          <StatCard title="Completed" value={stats.completed} color="#22c55e" icon="✅" />
+          <StatCard title="Pending" value={stats.pending} color="#f59e0b" icon="⏳" />
         </div>
 
         {/* GRID */}
@@ -101,17 +117,15 @@ export default function Dashboard() {
           <div className="card">
             <h3>Your Tasks</h3>
 
-            <DragDropContext onDragEnd={(result) => {
-              if (!result.destination) return;
-
-              const items = Array.from(tasks);
-              const [reordered] = items.splice(result.source.index, 1);
-              items.splice(result.destination.index, 0, reordered);
-
-              setTasks(items);
-              showToast("Reordered 🔄");
-            }}>
-
+            <DragDropContext
+              onDragEnd={(result) => {
+                if (!result.destination) return;
+                const items = Array.from(tasks);
+                const [reordered] = items.splice(result.source.index, 1);
+                items.splice(result.destination.index, 0, reordered);
+                setTasks(items);
+              }}
+            >
               <Droppable droppableId="tasks">
                 {(provided) => (
                   <div ref={provided.innerRef} {...provided.droppableProps}>
@@ -126,24 +140,28 @@ export default function Dashboard() {
                             className="task"
                             whileHover={{ scale: 1.03 }}
                           >
-                            <h4>{t.title}</h4>
-                            <p>{t.due_date}</p>
-                            <span className={`badge ${t.priority}`}>
-                              {t.priority}
-                            </span>
+                            <div className="task-top">
+                              <h4>{t.title}</h4>
+                              <span className={`badge ${t.priority || "medium"}`}>
+                                {t.priority || "medium"}
+                              </span>
+                            </div>
+
+                            <p className="date">
+                              {t.due_date
+                                ? new Date(t.due_date).toLocaleDateString()
+                                : "No date"}
+                            </p>
                           </motion.div>
                         )}
                       </Draggable>
                     ))}
 
                     {provided.placeholder}
-
                   </div>
                 )}
               </Droppable>
-
             </DragDropContext>
-
           </div>
 
           {/* ANALYTICS */}
@@ -152,20 +170,15 @@ export default function Dashboard() {
             <canvas id="chart"></canvas>
           </div>
 
-          {/* CALENDAR */}
-          <div className="card">
-            <h3>📅 Calendar</h3>
-            <input type="date" />
-          </div>
-
         </div>
 
-      
+        {/* CALENDAR */}
+        <div className="calendar-card">
+          <h3>📅 Calendar</h3>
+          <input type="date" className="date-input" />
+        </div>
+
       </div>
-
-      {/* TOAST */}
-      <div id="toast"></div>
-
-    </motion.div>
+    </div>
   );
 }

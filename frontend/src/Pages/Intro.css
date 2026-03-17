@@ -1,54 +1,96 @@
+/* Full container */
 .intro-container {
   height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #0f0f1a;
   overflow: hidden;
   position: relative;
   color: white;
+  font-family: 'Poppins', sans-serif;
 }
 
-/* Glow effect */
-.glow {
+/* 🔥 Animated Gradient Background */
+.animated-bg {
   position: absolute;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, #6366f1, transparent);
-  filter: blur(120px);
-  animation: pulse 6s infinite;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    #0f0f1a,
+    #1e1b4b,
+    #312e81,
+    #6366f1
+  );
+  background-size: 400% 400%;
+  animation: gradientMove 10s ease infinite;
+  z-index: 0;
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(1.3); opacity: 1; }
-  100% { transform: scale(1); opacity: 0.6; }
+@keyframes gradientMove {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(-25%, -25%); }
+  100% { transform: translate(0, 0); }
 }
 
+/* ✨ Mouse Glow */
+.cursor-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(99,102,241,0.6), transparent);
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+/* Content */
 .intro-content {
-  text-align: center;
+  position: relative;
   z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transform-style: preserve-3d;
 }
 
+/* Title */
 .intro-title {
   font-size: 4rem;
   font-weight: 700;
-  letter-spacing: 2px;
+  background: linear-gradient(135deg, #a5b4fc, #c084fc);
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
+/* Subtitle */
 .intro-subtitle {
   margin-top: 10px;
   font-size: 1.3rem;
-  color: #aaa;
+  color: #ddd;
 }
 
+/* Button */
 .intro-btn {
   margin-top: 30px;
   padding: 12px 28px;
+  border-radius: 12px;
   border: none;
-  border-radius: 10px;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
-  font-size: 1rem;
   cursor: pointer;
+  box-shadow: 0 0 20px rgba(99,102,241,0.6);
+}
+
+/* 🤖 AI Popup */
+.ai-popup {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.1);
+  padding: 10px 16px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  font-size: 0.9rem;
 }
