@@ -2,133 +2,151 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from datetime import datetime
+import requests
 
 app = Flask(__name__)
+CORS(app)  # ✅ FIX FRONTEND CONFLICT
 
-# ✅ Enable CORS (VERY IMPORTANT for React)
-CORS(app)
-
-# ✅ Database config
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///campusflow.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# ✅ MODEL
+N8N_WEBHOOK_URL = "http://localhost:5678/webhook/add-assignment"
+
+# 📦 MODEL
 class Assignment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
-    due_date = db.Column(db.String(100))
+    due_date = db.Column(db.String(100), nullable=True)  # ✅ OPTIONAL NOW
     description = db.Column(db.String(500))
     status = db.Column(db.String(50), default="pending")
     priority = db.Column(db.String(50), default="medium")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    phone = db.Column(db.String(20))
 
-# ✅ CREATE DB
+# 🏗 INIT DB
 with app.app_context():
     db.create_all()
 
-# 🚀 ADD TASK
+# 🏠 HOME
+@app.route('/')
+def home():
+    return "CampusFlow Backend Running 🚀"
+
+# 🔍 HEALTH
+@app.route('/health')
+def health():
+    return jsonify({"status": "ok"})
+
+# 🚀 ADD TASK (FIXED)
 @app.route('/add', methods=['POST'])
 def add_task():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON"}), 400
+
+    title = data.get('title')
+    due_date = data.get('due_date') or datetime.utcnow().isoformat()  # ✅ DEFAULT
+    priority = data.get('priority', 'medium')
+    phone = data.get('phone', '+916363330474')
+    description = data.get('description', '')
+
+    if not title:
+        return jsonify({"error": "Title required"}), 400
+
+    task = Assignment(
+        title=title,
+        due_date=due_date,
+        description=description,
+        priority=priority,
+        phone=phone
+    )
+
+    db.session.add(task)
+    db.session.commit()
+
+    # 🔁 n8n CALL (SAFE)
     try:
-        data = request.get_json()
+        payload = {
+            "title": title,
+            "deadline": due_date,
+            "phone": phone,
+            "priority": priority,
+            "task_id": task.id
+        }
+        requests.post(N8N_WEBHOOK_URL, json=payload, timeout=3)
+    except:
+        pass  # don't break app
 
-        if not data or not data.get("title"):
-            return jsonify({"error": "Title is required"}), 400
+    return jsonify({"msg": "Task added", "id": task.id})
 
-        task = Assignment(
-            title=data.get('title'),
-            due_date=data.get('due_date', ''),
-            description=data.get('description', ''),
-            priority=data.get('priority', 'medium')
-        )
+# 📋 GET TASKS (FRONTEND SAFE)
+@app.route('/tasks')
+def tasks():
+    data = Assignment.query.all()
 
-        db.session.add(task)
-        db.session.commit()
+    return jsonify([{
+        "id": t.id,
+        "title": t.title,
+        "due_date": t.due_date,
+        "status": t.status,
+        "priority": t.priority
+    } for t in data])
 
-        return jsonify({"msg": "Task added successfully"}), 201
+# 📊 STATS (🔥 REQUIRED FOR DASHBOARD)
+@app.route('/stats')
+def stats():
+    total = Assignment.query.count()
+    completed = Assignment.query.filter_by(status="completed").count()
+    pending = Assignment.query.filter_by(status="pending").count()
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify({
+        "total": total,
+        "completed": completed,
+        "pending": pending
+    })
 
-# 🚀 GET TASKS
-@app.route('/tasks', methods=['GET'])
-def get_tasks():
-    try:
-        tasks = Assignment.query.order_by(Assignment.id.desc()).all()
-
-        return jsonify([
-            {
-                "id": t.id,
-                "title": t.title,
-                "due_date": t.due_date,
-                "status": t.status,
-                "priority": t.priority,
-                "created_at": t.created_at.strftime("%Y-%m-%d %H:%M")
-            }
-            for t in tasks
-        ])
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# 🚀 COMPLETE TASK
+# ✅ COMPLETE TASK
 @app.route('/complete/<int:id>', methods=['PUT'])
-def complete_task(id):
-    try:
-        task = Assignment.query.get(id)
+def complete(id):
+    t = Assignment.query.get(id)
+    if not t:
+        return jsonify({"error": "Not found"}), 404
 
-        if not task:
-            return jsonify({"error": "Task not found"}), 404
+    t.status = "completed"
+    db.session.commit()
 
-        task.status = "completed"
-        db.session.commit()
+    return jsonify({"msg": "Completed"})
 
-        return jsonify({"msg": "Task marked as completed"})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# 🚀 DELETE TASK
+# 🗑 DELETE
 @app.route('/delete/<int:id>', methods=['DELETE'])
-def delete_task(id):
-    try:
-        task = Assignment.query.get(id)
+def delete(id):
+    t = Assignment.query.get(id)
+    if not t:
+        return jsonify({"error": "Not found"}), 404
 
-        if not task:
-            return jsonify({"error": "Task not found"}), 404
+    db.session.delete(t)
+    db.session.commit()
 
-        db.session.delete(task)
-        db.session.commit()
+    return jsonify({"msg": "Deleted"})
 
-        return jsonify({"msg": "Task deleted successfully"})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# 🤖 AI SUGGESTION
-@app.route('/ai', methods=['GET'])
+# 🤖 AI (IMPROVED)
+@app.route('/ai')
 def ai():
-    try:
-        tasks = Assignment.query.all()
-        pending = [t for t in tasks if t.status == "pending"]
+    tasks = Assignment.query.all()
+    pending = [t for t in tasks if t.status == "pending"]
 
-        if len(tasks) == 0:
-            return jsonify({"msg": "Start by adding tasks 🚀"})
+    if not tasks:
+        return jsonify({"msg": "Start adding tasks 🚀"})
 
-        if len(pending) > 5:
-            return jsonify({"msg": "Too many pending tasks 😬 Focus on high priority first!"})
+    if len(pending) > 5:
+        return jsonify({"msg": "Too many pending tasks 😬"})
 
-        if any(t.priority == "high" and t.status == "pending" for t in tasks):
-            return jsonify({"msg": "You have high priority tasks pending ⚡ Do them first!"})
+    if any(t.priority == "high" for t in pending):
+        return jsonify({"msg": "High priority tasks pending ⚡"})
 
-        return jsonify({"msg": "You're doing great 💪 Keep going!"})
+    return jsonify({"msg": "You're doing great 💪"})
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# 🚀 RUN SERVER
 if __name__ == '__main__':
-    app.run(debug=True, use_reloader=False)
+    app.run(debug=True)

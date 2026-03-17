@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import Chart from "chart.js/auto";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import "./Dashboard.css";
+import "./dashboard.css";
+
+const API = "http://127.0.0.1:5000";
 
 /* ===== STAT CARD ===== */
 function StatCard({ title, value, color, icon }) {
   return (
-    <motion.div
-      className="stat-card"
-      whileHover={{ scale: 1.05 }}
-    >
+    <motion.div className="stat-card" whileHover={{ scale: 1.05 }}>
       <div className="stat-top">
         <span>{icon}</span>
         <p>{title}</p>
@@ -30,30 +29,52 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadAll();
-    const interval = setInterval(loadAll, 5000);
+    const interval = setInterval(loadAll, 3000);
     return () => clearInterval(interval);
   }, []);
 
   async function loadAll() {
-    const res1 = await fetch("http://127.0.0.1:5000/tasks");
-    const data1 = await res1.json();
-    setTasks(data1);
-    drawChart(data1);
+    try {
+      // GET TASKS
+      const res1 = await fetch(`${API}/tasks`);
+      const data1 = await res1.json();
+      setTasks(data1);
+      drawChart(data1);
 
-    const res2 = await fetch("http://127.0.0.1:5000/stats");
-    const data2 = await res2.json();
-    setStats(data2);
+      // GET STATS
+      const res2 = await fetch(`${API}/stats`);
+      const data2 = await res2.json();
+      setStats(data2);
+    } catch (err) {
+      console.error("LOAD ERROR:", err);
+    }
   }
 
+  /* 🔥 FIXED ADD TASK */
   async function addTask() {
-    await fetch("http://127.0.0.1:5000/add", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title: "New Task" }),
-    });
-    loadAll();
+    try {
+      const title = prompt("Enter Task Name:");
+      if (!title) return;
+
+      const res = await fetch(`${API}/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: title,
+          due_date: new Date().toISOString(), // ✅ REQUIRED
+          priority: "medium",
+        }),
+      });
+
+      const data = await res.json();
+      console.log("ADD RESPONSE:", data);
+
+      loadAll(); // refresh UI
+    } catch (err) {
+      console.error("ADD ERROR:", err);
+    }
   }
 
   function drawChart(data) {
@@ -95,7 +116,7 @@ export default function Dashboard() {
       {/* MAIN */}
       <div className="main">
 
-        {/* TOP */}
+        {/* TOPBAR */}
         <div className="topbar">
           <h1>Welcome Back 👋</h1>
           <button className="primary" onClick={addTask}>
